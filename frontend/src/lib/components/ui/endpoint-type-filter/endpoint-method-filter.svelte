@@ -1,17 +1,12 @@
 <script lang="ts">
 	import * as Select from '$lib/components/ui/select';
-	import Button from '../button/button.svelte';
 
 	type Props = {
 		value?: string;
-		onSearch: () => void;
-		disabled?: boolean;
 	};
 
 	let { 
 		value = $bindable('all'), 
-		onSearch,
-		disabled = false 
 	}: Props = $props();
 
 	const METHOD_COLORS: Record<string, string> = {
@@ -25,7 +20,7 @@
 	};
 
 	const options = [
-		{ value: 'all', label: 'All' },
+		{ value: 'all', label: 'Methods' },
 		{ value: 'get', label: 'GET' },
 		{ value: 'post', label: 'POST' },
 		{ value: 'put', label: 'PUT' },
@@ -51,7 +46,4 @@
 			{/each}
 		</Select.Content>
 	</Select.Root>
-	<Button variant="outline" class="h-9 rounded-l-none shadow-none" onclick={onSearch} {disabled}>
-		Go
-	</Button>
 </div>

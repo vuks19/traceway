@@ -427,6 +427,7 @@
         disabled={loading}
     >
         {#snippet children()}
+            <EndpointMethodFilter bind:value={methodFilter}/>
             <RootFilter bind:value={rootFilter} />
         {/snippet}
     </SearchBar>
@@ -483,8 +484,6 @@
             {/if}
         </Card.Content>
     </Card.Root>
-        
-    <EndpointMethodFilter bind:value={methodFilter} onSearch={handleSearchByMethod} disabled={false}/>
 
 
     <!-- Endpoints Table -->
