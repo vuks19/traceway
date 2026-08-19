@@ -35,7 +35,7 @@
 
 <div class="flex">
 	<Select.Root type="single" bind:value>
-		<Select.Trigger class="h-9 w-[120px] rounded border-r-0 shadow-none font-mono text-sm">
+		<Select.Trigger class="h-9 w-[120px] rounded-none border-r-0 shadow-none font-mono text-sm">
 			<span class={METHOD_COLORS[label] ?? ''}>{label}</span>
 		</Select.Trigger>
 		<Select.Content>

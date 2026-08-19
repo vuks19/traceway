@@ -103,15 +103,16 @@
     let total = $state(0);
     let totalPages = $state(0);
 
-    // Parse URL params including search + rootFilter
+    // Parse URL params including search + rootFilter + methodFilter
     function parseEndpointsUrlParams() {
-        if (!browser) return { preset: '24h', from: null, to: null, search: '', rootFilter: 'all' };
+        if (!browser) return { preset: '24h', from: null, to: null, search: '', rootFilter: 'all', methodFilter: 'all' };
         const params = new URLSearchParams(window.location.search);
         const timeParams = parseTimeRangeFromUrl(timezone, '24h');
         return {
             ...timeParams,
             search: params.get('search') || '',
-            rootFilter: params.get('rootFilter') || 'all'
+            rootFilter: params.get('rootFilter') || 'all',
+            methodFilter: params.get('methodFilter') || 'all'
         };
     }
 
@@ -119,9 +120,10 @@
     const initialUrlParams = parseEndpointsUrlParams();
     const initialRange = getResolvedTimeRange(initialUrlParams, initialTimezone);
 
-    // Search + rootFilter state
+    // Search + rootFilter + methodFilter state
     let searchQuery = $state(initialUrlParams.search);
     let rootFilter = $state(initialUrlParams.rootFilter);
+    let methodFilter = $state(initialUrlParams.methodFilter);
 
     // Date Range State
     let selectedPreset = $state<string | null>(initialUrlParams.preset);
@@ -145,6 +147,9 @@
         if (rootFilter && rootFilter !== 'all') {
             params.rootFilter = rootFilter;
         }
+        if (methodFilter && methodFilter !== 'all') {
+            params.methodFilter = methodFilter;
+        }
         updateUrl(params, { pushToHistory });
     }
 
@@ -160,6 +165,7 @@
         toTime = dateToTimeString(range.to, timezone);
         searchQuery = urlParams.search;
         rootFilter = urlParams.rootFilter;
+        methodFilter = urlParams.methodFilter;
 
         page = 1;
         loadData(false);
@@ -332,11 +338,6 @@
         page = 1;
         loadData(true);
     }
-    function handleSearchByMethod() {
-        page = 1;
-        loadData(true);
-    }
-
     function handleChartRangeSelect(from: Date, to: Date) {
         selectedPreset = null;
         fromDate = new CalendarDate(from.getFullYear(), from.getMonth() + 1, from.getDate());
@@ -398,7 +399,6 @@
             window.removeEventListener('popstate', handlePopState);
         }
     });
-    let methodFilter = $state('all');
 </script>
 
 <div class="space-y-4">
