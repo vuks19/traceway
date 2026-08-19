@@ -44,7 +44,7 @@
         type SortDirection
     } from '$lib/utils/sort-storage';
 	import { ChartLine } from '@lucide/svelte';
-	import EndpointMethodFilter from '$lib/components/ui/endpoint-type-filter/endpoint-method-filter.svelte';
+	import EndpointMethodFilter from '$lib/components/ui/endpoint-method-filter/endpoint-method-filter.svelte';
 
     const timezone = $derived(getTimezone());
     const initialTimezone = getTimezone();
