@@ -44,6 +44,7 @@
         type SortDirection
     } from '$lib/utils/sort-storage';
 	import { ChartLine } from '@lucide/svelte';
+	import EndpointMethodFilter from '$lib/components/ui/endpoint-type-filter/endpoint-method-filter.svelte';
 
     const timezone = $derived(getTimezone());
     const initialTimezone = getTimezone();
@@ -280,7 +281,8 @@
                     pageSize: pageSize
                 },
                 search: searchQuery.trim(),
-                rootFilter: rootFilter === 'all' ? '' : rootFilter
+                rootFilter: rootFilter === 'all' ? '' : rootFilter,
+                methodFilter: methodFilter === 'all' ? '' : methodFilter,
             };
 
             const response = await api.post('/endpoints/grouped', requestBody, { projectId: projectsState.currentProjectId ?? undefined });
@@ -327,6 +329,10 @@
     }
 
     function handleSearch() {
+        page = 1;
+        loadData(true);
+    }
+    function handleSearchByMethod() {
         page = 1;
         loadData(true);
     }
@@ -392,6 +398,7 @@
             window.removeEventListener('popstate', handlePopState);
         }
     });
+    let methodFilter = $state('all');
 </script>
 
 <div class="space-y-4">
@@ -476,6 +483,9 @@
             {/if}
         </Card.Content>
     </Card.Root>
+        
+    <EndpointMethodFilter bind:value={methodFilter} onSearch={handleSearchByMethod} disabled={false}/>
+
 
     <!-- Endpoints Table -->
     <div class="rounded-md border overflow-hidden">

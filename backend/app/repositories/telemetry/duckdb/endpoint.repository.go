@@ -218,7 +218,7 @@ func (e *endpointRepository) FindAll(ctx context.Context, projectId uuid.UUID, f
 	return endpoints, count, nil
 }
 
-func (e *endpointRepository) FindGroupedByEndpoint(ctx context.Context, projectId uuid.UUID, fromDate, toDate time.Time, page, pageSize int, orderBy string, sortDirection string, search string, rootFilter string) ([]models.EndpointStats, int64, error) {
+func (e *endpointRepository) FindGroupedByEndpoint(ctx context.Context, projectId uuid.UUID, fromDate, toDate time.Time, page, pageSize int, orderBy string, sortDirection string, search string, rootFilter string, methodFilter string) ([]models.EndpointStats, int64, error) {
 	params := lit.P{"project_id": projectId, "from": fromDate.UTC(), "to": toDate.UTC()}
 
 	whereClause := "e.project_id = :project_id AND e.recorded_at >= :from AND e.recorded_at <= :to"
@@ -227,6 +227,10 @@ func (e *endpointRepository) FindGroupedByEndpoint(ctx context.Context, projectI
 		params["search"] = search
 	}
 	whereClause += shared.RootFilterClause("e.is_root", rootFilter)
+	whereClause += shared.MethodFilterClause("e.endpoint", methodFilter)
+	if methodFilter != "" {
+		params["method_prefix"] = strings.ToUpper(methodFilter) + " %"
+	}
 
 	groupQuery := `SELECT
 		e.endpoint,

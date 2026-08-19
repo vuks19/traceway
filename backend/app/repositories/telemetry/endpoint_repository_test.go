@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,7 +135,7 @@ func TestEndpointRepository_FindGroupedByEndpoint(t *testing.T) {
 		t.Fatalf("InsertAsync failed: %v", err)
 	}
 
-	stats, total, err := EndpointRepository.FindGroupedByEndpoint(ctx, projectId, now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "count", "desc", "", "")
+	stats, total, err := EndpointRepository.FindGroupedByEndpoint(ctx, projectId, now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "count", "desc", "", "", "")
 	if err != nil {
 		t.Fatalf("FindGroupedByEndpoint failed: %v", err)
 	}
@@ -170,7 +171,7 @@ func TestEndpointRepository_FindGroupedByEndpoint_Search(t *testing.T) {
 		t.Fatalf("InsertAsync failed: %v", err)
 	}
 
-	stats, total, err := EndpointRepository.FindGroupedByEndpoint(ctx, projectId, now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "count", "desc", "users", "")
+	stats, total, err := EndpointRepository.FindGroupedByEndpoint(ctx, projectId, now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "count", "desc", "users", "", "")
 	if err != nil {
 		t.Fatalf("FindGroupedByEndpoint with search failed: %v", err)
 	}
@@ -183,6 +184,40 @@ func TestEndpointRepository_FindGroupedByEndpoint_Search(t *testing.T) {
 	}
 	if stats[0].Endpoint != "GET /api/users" {
 		t.Errorf("expected 'GET /api/users', got %q", stats[0].Endpoint)
+	}
+}
+
+func TestEndpointRepository_FindGroupedByEndpoint_MethodFilter(t *testing.T) {
+	setupTestDB(t)
+	ctx := context.Background()
+	projectId := uuid.New()
+	now := truncateMs(time.Now().UTC())
+
+	endpoints := []models.Endpoint{
+		makeEndpoint(projectId, "GET /api/users", 100*time.Millisecond, 200, now),
+		makeEndpoint(projectId, "POST /api/users", 150*time.Millisecond, 201, now.Add(time.Minute)),
+		makeEndpoint(projectId, "GET /api/products", 200*time.Millisecond, 200, now.Add(2*time.Minute)),
+	}
+
+	if err := EndpointRepository.InsertAsync(ctx, endpoints); err != nil {
+		t.Fatalf("InsertAsync failed: %v", err)
+	}
+
+	stats, total, err := EndpointRepository.FindGroupedByEndpoint(ctx, projectId, now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "count", "desc", "", "", "get")
+	if err != nil {
+		t.Fatalf("FindGroupedByEndpoint with methodFilter failed: %v", err)
+	}
+
+	if total != 2 {
+		t.Errorf("expected 2 GET endpoints, got %d", total)
+	}
+	if len(stats) != 2 {
+		t.Fatalf("expected 2 grouped stats, got %d", len(stats))
+	}
+	for _, s := range stats {
+		if !strings.HasPrefix(s.Endpoint, "GET ") {
+			t.Errorf("expected only GET endpoints, got %q", s.Endpoint)
+		}
 	}
 }
 

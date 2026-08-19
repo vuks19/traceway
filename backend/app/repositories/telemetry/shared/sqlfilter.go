@@ -15,6 +15,18 @@ func RootFilterClause(qualifiedCol, rootFilter string) string {
 	}
 }
 
+// MethodFilterClause returns the WHERE fragment for the endpoints HTTP-method
+// filter. Endpoint strings are stored as "METHOD /path" (see report.go), so a
+// method match is a case-sensitive prefix check against ":method_prefix" —
+// callers must set params["method_prefix"] = strings.ToUpper(methodFilter) + " %"
+// whenever methodFilter is non-empty.
+func MethodFilterClause(qualifiedCol, methodFilter string) string {
+	if methodFilter == "" {
+		return ""
+	}
+	return " AND " + qualifiedCol + " LIKE :method_prefix"
+}
+
 // SortedKeys returns map keys in stable order so generated SQL and its
 // bound parameters line up deterministically.
 func SortedKeys(m map[string]string) []string {
