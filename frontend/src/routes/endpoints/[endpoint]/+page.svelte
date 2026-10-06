@@ -38,6 +38,7 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { Badge } from '$lib/components/ui/badge';
+	import { SearchBar } from '$lib/components/ui/search-bar';
 	import { toast } from 'svelte-sonner';
 	import {
 		presetMinutes,
@@ -100,6 +101,8 @@
 	let total = $state(0);
 	let totalPages = $state(0);
 
+	let searchQuery = $state(untrack(() => data.search));
+
 	// Initialize from URL params (from page data)
 	function getInitialRange(): { preset: string | null; from: Date; to: Date } {
 		// If preset is provided, use it
@@ -133,9 +136,12 @@
 
 	function updateTimeRangeUrl(pushToHistory = true) {
 		updateUrl(
-			selectedPreset
-				? { preset: selectedPreset }
-				: { from: getFromDateTimeUTC(), to: getToDateTimeUTC() },
+			{
+				...(selectedPreset
+					? { preset: selectedPreset }
+					: { from: getFromDateTimeUTC(), to: getToDateTimeUTC() }),
+				search: searchQuery.trim()
+			},
 			{ pushToHistory }
 		);
 	}
@@ -239,6 +245,7 @@
 				toDate: getToDateTimeUTC(),
 				orderBy: orderBy,
 				sortDirection: sortDirection,
+				search: searchQuery.trim(),
 				pagination: {
 					page: page,
 					pageSize: pageSize
@@ -268,6 +275,11 @@
 		} finally {
 			if (sequence === loadSequence) loading = false;
 		}
+	}
+
+	function handleSearch() {
+		page = 1;
+		loadData(true);
 	}
 
 	function handlePageChange(newPage: number) {
@@ -344,6 +356,7 @@
 		toDate = dateToCalendarDate(range.to, timezone);
 		fromTime = dateToTimeString(range.from, timezone);
 		toTime = dateToTimeString(range.to, timezone);
+		searchQuery = new URLSearchParams(window.location.search).get('search') || '';
 		page = 1;
 		loadData(false);
 	}
@@ -371,6 +384,7 @@
 			toDate = dateToCalendarDate(range.to, timezone);
 			fromTime = dateToTimeString(range.from, timezone);
 			toTime = dateToTimeString(range.to, timezone);
+			searchQuery = data.search;
 			loadData(false);
 			offsetMs = 0;
 			reason = '';
@@ -498,6 +512,15 @@
 			</div>
 		{/if}
 
+		<div class="flex justify-end">
+			<SearchBar
+				placeholder="Search client IP or attributes..."
+				bind:value={searchQuery}
+				onSearch={handleSearch}
+				disabled={loading}
+			/>
+		</div>
+
 		<!-- Traces Table -->
 		<TableContainer minWidth="960px" empty={!loading && transactions.length === 0}>
 			<Table.Root>
@@ -553,7 +576,12 @@
 							</Table.Cell>
 						</Table.Row>
 					{:else if transactions.length === 0}
-						<TableEmptyState colspan={8} message="No traces found in this time range." />
+						<TableEmptyState
+							colspan={8}
+							message={searchQuery.trim()
+								? 'No traces match your search in this time range.'
+								: 'No traces found in this time range.'}
+						/>
 					{:else}
 						{#each transactions as transaction, __index (__index)}
 							<Table.Row

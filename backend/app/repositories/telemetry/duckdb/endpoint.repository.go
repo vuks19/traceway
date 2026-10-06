@@ -339,11 +339,16 @@ func (e *endpointRepository) FindGroupedByEndpoint(ctx context.Context, projectI
 	return stats[start:endIdx], totalEndpoints, nil
 }
 
-func (e *endpointRepository) FindByEndpoint(ctx context.Context, projectId uuid.UUID, endpointName string, fromDate, toDate time.Time, page, pageSize int, orderBy string, sortDirection string) ([]models.Endpoint, int64, error) {
+func (e *endpointRepository) FindByEndpoint(ctx context.Context, projectId uuid.UUID, endpointName string, fromDate, toDate time.Time, page, pageSize int, orderBy string, sortDirection string, search string) ([]models.Endpoint, int64, error) {
 	params := lit.P{"project_id": projectId, "endpoint": endpointName, "from": fromDate.UTC(), "to": toDate.UTC()}
+	where := "project_id = :project_id AND endpoint = :endpoint AND recorded_at >= :from AND recorded_at <= :to"
+	if search != "" {
+		where += " AND (INSTR(LOWER(client_ip), LOWER(:search)) > 0 OR INSTR(LOWER(attributes), LOWER(:search)) > 0)"
+		params["search"] = search
+	}
 
 	countResult, err := lit.SelectSingleNamed[models.CountResult](db.TelemetryDB,
-		"SELECT COUNT(*) AS count FROM endpoints_v2 WHERE project_id = :project_id AND endpoint = :endpoint AND recorded_at >= :from AND recorded_at <= :to",
+		"SELECT COUNT(*) AS count FROM endpoints_v2 WHERE "+where,
 		params)
 	if err != nil {
 		return nil, 0, err
@@ -354,6 +359,8 @@ func (e *endpointRepository) FindByEndpoint(ctx context.Context, projectId uuid.
 	}
 
 	offset := (page - 1) * pageSize
+	params["limit"] = pageSize
+	params["offset"] = offset
 
 	allowedOrderBy := map[string]bool{"recorded_at": true, "duration": true, "status_code": true, "body_size": true}
 	if !allowedOrderBy[orderBy] {
@@ -367,9 +374,9 @@ func (e *endpointRepository) FindByEndpoint(ctx context.Context, projectId uuid.
 
 	rows, err := lit.SelectNamed[endpoint](db.TelemetryDB,
 		fmt.Sprintf(`SELECT id, project_id, endpoint, duration, recorded_at, status_code, body_size, client_ip, attributes, app_version, server_name, trace_id, span_id, parent_span_id
-		FROM endpoints_v2 WHERE project_id = :project_id AND endpoint = :endpoint AND recorded_at >= :from AND recorded_at <= :to
-		ORDER BY %s %s LIMIT :limit OFFSET :offset`, orderBy, sortDir),
-		lit.P{"project_id": projectId, "endpoint": endpointName, "from": fromDate.UTC(), "to": toDate.UTC(), "limit": pageSize, "offset": offset})
+		FROM endpoints_v2 WHERE %s
+		ORDER BY %s %s LIMIT :limit OFFSET :offset`, where, orderBy, sortDir),
+		params)
 	if err != nil {
 		return nil, 0, err
 	}

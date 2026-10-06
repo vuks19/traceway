@@ -295,9 +295,16 @@ func (e *endpointRepository) FindGroupedByEndpoint(ctx context.Context, projectI
 	return stats, int64(count), nil
 }
 
-func (e *endpointRepository) FindByEndpoint(ctx context.Context, projectId uuid.UUID, endpoint string, fromDate, toDate time.Time, page, pageSize int, orderBy string, sortDirection string) ([]models.Endpoint, int64, error) {
+func (e *endpointRepository) FindByEndpoint(ctx context.Context, projectId uuid.UUID, endpoint string, fromDate, toDate time.Time, page, pageSize int, orderBy string, sortDirection string, search string) ([]models.Endpoint, int64, error) {
+	where := "project_id = ? AND endpoint = ? AND recorded_at >= ? AND recorded_at <= ?"
+	args := []any{projectId, endpoint, fromDate, toDate}
+	if search != "" {
+		where += " AND (positionCaseInsensitive(client_ip, ?) > 0 OR positionCaseInsensitive(attributes, ?) > 0)"
+		args = append(args, search, search)
+	}
+
 	var count uint64
-	err := chdb.Conn.QueryRow(ctx, "SELECT count() FROM endpoints_v2 WHERE project_id = ? AND endpoint = ? AND recorded_at >= ? AND recorded_at <= ?", projectId, endpoint, fromDate, toDate).Scan(&count)
+	err := chdb.Conn.QueryRow(ctx, "SELECT count() FROM endpoints_v2 WHERE "+where, args...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -321,8 +328,8 @@ func (e *endpointRepository) FindByEndpoint(ctx context.Context, projectId uuid.
 		sortDir = "ASC"
 	}
 
-	query := "SELECT id, project_id, endpoint, duration, recorded_at, status_code, body_size, client_ip, attributes, app_version, server_name, trace_id, span_id, parent_span_id FROM endpoints_v2 WHERE project_id = ? AND endpoint = ? AND recorded_at >= ? AND recorded_at <= ? ORDER BY " + orderBy + " " + sortDir + " LIMIT ? OFFSET ?"
-	rows, err := chdb.Conn.Query(ctx, query, projectId, endpoint, fromDate, toDate, pageSize, offset)
+	query := "SELECT id, project_id, endpoint, duration, recorded_at, status_code, body_size, client_ip, attributes, app_version, server_name, trace_id, span_id, parent_span_id FROM endpoints_v2 WHERE " + where + " ORDER BY " + orderBy + " " + sortDir + " LIMIT ? OFFSET ?"
+	rows, err := chdb.Conn.Query(ctx, query, append(args, pageSize, offset)...)
 	if err != nil {
 		return nil, 0, err
 	}

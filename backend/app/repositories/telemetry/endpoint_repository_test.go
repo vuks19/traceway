@@ -322,7 +322,7 @@ func TestEndpointRepository_FindByEndpoint(t *testing.T) {
 		t.Fatalf("InsertAsync failed: %v", err)
 	}
 
-	found, total, err := EndpointRepository.FindByEndpoint(ctx, projectId, "GET /api/users", now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "recorded_at", "desc")
+	found, total, err := EndpointRepository.FindByEndpoint(ctx, projectId, "GET /api/users", now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "recorded_at", "desc", "")
 	if err != nil {
 		t.Fatalf("FindByEndpoint failed: %v", err)
 	}
@@ -336,6 +336,41 @@ func TestEndpointRepository_FindByEndpoint(t *testing.T) {
 	for _, f := range found {
 		if f.Endpoint != "GET /api/users" {
 			t.Errorf("expected endpoint 'GET /api/users', got %q", f.Endpoint)
+		}
+	}
+}
+
+func TestEndpointRepository_FindByEndpointSearch(t *testing.T) {
+	setupTestDB(t)
+	ctx := context.Background()
+	projectId := uuid.New()
+	now := truncateMs(time.Now().UTC())
+
+	byIP := makeEndpoint(projectId, "GET /api/users", 100*time.Millisecond, 200, now)
+	byIP.ClientIP = "178.149.201.207"
+	byAttr := makeEndpoint(projectId, "GET /api/users", 100*time.Millisecond, 200, now.Add(time.Minute))
+	byAttr.Attributes = map[string]string{"OrganizationId": "131"}
+	other := makeEndpoint(projectId, "GET /api/users", 100*time.Millisecond, 200, now.Add(2*time.Minute))
+
+	if err := EndpointRepository.InsertAsync(ctx, []models.Endpoint{byIP, byAttr, other}); err != nil {
+		t.Fatalf("InsertAsync failed: %v", err)
+	}
+
+	cases := []struct {
+		search string
+		want   uuid.UUID
+	}{
+		{"178.149", byIP.Id},
+		{"organizationid", byAttr.Id},
+		{"131", byAttr.Id},
+	}
+	for _, tc := range cases {
+		found, total, err := EndpointRepository.FindByEndpoint(ctx, projectId, "GET /api/users", now.Add(-time.Hour), now.Add(time.Hour), 1, 10, "recorded_at", "desc", tc.search)
+		if err != nil {
+			t.Fatalf("FindByEndpoint(%q) failed: %v", tc.search, err)
+		}
+		if total != 1 || len(found) != 1 || found[0].Id != tc.want {
+			t.Errorf("search %q: expected only %s, got total=%d rows=%v", tc.search, tc.want, total, found)
 		}
 	}
 }

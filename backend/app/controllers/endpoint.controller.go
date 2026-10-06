@@ -34,6 +34,7 @@ type EndpointInstancesRequest struct {
 	ToDate        time.Time        `json:"toDate"`
 	OrderBy       string           `json:"orderBy"`
 	SortDirection string           `json:"sortDirection"`
+	Search        string           `json:"search"`
 	Pagination    PaginationParams `json:"pagination"`
 }
 
@@ -164,7 +165,7 @@ func (e endpointController) FindByEndpoint(c *gin.Context) {
 	}
 
 	span := traceway.StartSpan(c, "loading endpoint instances")
-	endpoints, total, err := telemetry.EndpointRepository.FindByEndpoint(c, projectId, endpoint, request.FromDate, request.ToDate, request.Pagination.Page, request.Pagination.PageSize, request.OrderBy, request.SortDirection)
+	endpoints, total, err := telemetry.EndpointRepository.FindByEndpoint(c, projectId, endpoint, request.FromDate, request.ToDate, request.Pagination.Page, request.Pagination.PageSize, request.OrderBy, request.SortDirection, strings.TrimSpace(request.Search))
 	span.End()
 	if err != nil {
 		c.AbortWithError(500, traceway.NewStackTraceErrorf("error loading endpoints: %w", err))

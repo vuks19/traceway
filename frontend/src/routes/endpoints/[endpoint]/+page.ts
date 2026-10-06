@@ -13,6 +13,7 @@ export const load: PageLoad = ({ params, url }) => {
 		endpoint: params.endpoint,
 		preset: url.searchParams.get('preset') || null,
 		from: url.searchParams.get('from') || null,
-		to: url.searchParams.get('to') || null
+		to: url.searchParams.get('to') || null,
+		search: url.searchParams.get('search') || ''
 	};
 };
